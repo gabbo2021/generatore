@@ -1,22 +1,30 @@
-const CACHE_NAME = 'studio-creativo-v1';
+const CACHE_NAME = 'studio-creativo-v2';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
   './manifest.json',
-  'https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Lora:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Mono:wght@500;600&display=swap'
+  './icon-192.png',
+  './icon-512.png'
 ];
 
-// Installazione del Service Worker e salvataggio dei file
+// Installazione: mette in cache solo le risorse locali, certe di funzionare.
+// Se una fallisse comunque, non blocca l'intera installazione.
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_CACHE);
+      return Promise.all(
+        ASSETS_TO_CACHE.map((url) =>
+          cache.add(url).catch((err) => {
+            console.warn('Impossibile mettere in cache:', url, err);
+          })
+        )
+      );
     })
   );
   self.skipWaiting();
 });
 
-// Attivazione e pulizia vecchie cache
+// Attivazione e pulizia delle cache vecchie
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
@@ -32,14 +40,21 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Intercettazione richieste per far funzionare l'app offline
+// Strategia network-first: prova sempre la rete per primo,
+// così le modifiche pubblicate si vedono subito.
+// Se la rete non risponde (offline), usa la cache come riserva.
 self.addEventListener('fetch', (event) => {
+  if (event.request.method !== 'GET') return;
+
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
-      return fetch(event.request);
-    })
+    fetch(event.request)
+      .then((networkResponse) => {
+        const responseClone = networkResponse.clone();
+        caches.open(CACHE_NAME).then((cache) => {
+          cache.put(event.request, responseClone);
+        });
+        return networkResponse;
+      })
+      .catch(() => caches.match(event.request))
   );
 });
