@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Generatore di idee creative</title>
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#12151C">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Studio Creativo">
+<link rel="apple-touch-icon" href="icon-192.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Lora:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#12151C;
+    --ink-soft:#1B1F29;
+    --paper:#F6F2E9;
+    --paper-dim:#ECE5D5;
+    --rust:#C1442D;
+    --teal:#2F6E68;
+    --brass:#C9A15D;
+    --text:#332F27;
+    --text-dim:#7A7568;
+    --line:#D8CFB8;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    min-height:100vh;
+    background:
+      radial-gradient(ellipse 900px 500px at 20% -5%, rgba(193,68,45,.10), transparent 60%),
+      radial-gradient(ellipse 700px 500px at 100% 10%, rgba(201,161,93,.08), transparent 60%),
+      var(--ink);
+    color:var(--paper);
+    font-family:'Lora', serif;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    position:relative;
+    overflow-x:hidden;
+  }
+  body::before{
+    content:"";
+    position:fixed; inset:0;
+    pointer-events:none;
+    opacity:.035;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+    mix-blend-mode:overlay;
+  }
+
+  header{
+    padding:52px 24px 28px;
+    text-align:center;
+    position:relative;
+    z-index:1;
+  }
+  .stamp-label{
+    font-family:'Oswald',sans-serif;
+    letter-spacing:.32em;
+    font-size:11px;
+    color:var(--brass);
+    text-transform:uppercase;
+    margin-bottom:12px;
+    opacity:0;
+    animation:fadeIn .6s ease forwards .1s;
+  }
+  h1{
+    font-family:'Oswald',sans-serif;
+    font-weight:700;
+    font-size:clamp(30px,5.5vw,46px);
+    margin:0;
+    text-transform:uppercase;
+    letter-spacing:.01em;
+    opacity:0;
+    animation:fadeIn .6s ease forwards .2s;
+  }
+  header p{
+    color:#9A9484;
+    font-style:italic;
+    font-size:14.5px;
+    max-width:420px;
+    margin:14px auto 0;
+    opacity:0;
+    animation:fadeIn .6s ease forwards .32s;
+  }
+
+  .progress{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    margin:0 0 34px;
+    z-index:1;
+  }
+  .progress .dot{
+    width:8px; height:8px;
+    border-radius:50%;
+    background:#4A4638;
+    transition:background .3s ease, transform .3s ease;
+  }
+  .progress .bar{
+    width:34px; height:1px;
+    background:#4A4638;
+    transition:background .3s ease;
+  }
+  .progress .dot.done, .progress .bar.done{background:var(--brass);}
+  .progress .dot.now{background:var(--rust); transform:scale(1.5);}
+
+  main{
+    width:100%;
+    max-width:660px;
+    padding:0 20px 70px;
+    flex:1;
+    z-index:1;
+  }
+  .step{display:none;}
+  .step.active{
+    display:block;
+    animation:stepIn .45s cubic-bezier(.16,1,.3,1);
+  }
+  @keyframes stepIn{
+    from{opacity:0; transform:translateY(14px);}
+    to{opacity:1; transform:translateY(0);}
+  }
+  @keyframes fadeIn{
+    from{opacity:0; transform:translateY(-6px);}
+    to{opacity:1; transform:translateY(0);}
+  }
+
+  .categories{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:14px;
+  }
+  @media (max-width:480px){ .categories{grid-template-columns:1fr;} }
+
+  .cat-card{
+    background:var(--paper);
+    color:var(--text);
+    border:1px solid transparent;
+    border-radius:10px;
+    padding:24px 20px;
+    text-align:left;
+    cursor:pointer;
+    font-family:'Lora',serif;
+    font-size:15px;
+    transition:transform .25s cubic-bezier(.16,1,.3,1), box-shadow .25s ease, border-color .25s ease;
+    position:relative;
+    overflow:hidden;
+  }
+  .cat-card::after{
+    content:"";
+    position:absolute;
+    top:0; left:0; right:0;
+    height:3px;
+    background:var(--rust);
+    transform:scaleX(0);
+    transform-origin:left;
+    transition:transform .3s cubic-bezier(.16,1,.3,1);
+  }
+  .cat-card:hover{
+    transform:translateY(-4px);
+    box-shadow:0 18px 34px -14px rgba(0,0,0,.55);
+    border-color:var(--line);
+  }
+  .cat-card:hover::after{transform:scaleX(1);}
+  .cat-card:focus-visible{outline:2px solid var(--brass); outline-offset:3px;}
+  .cat-icon{
+    width:30px; height:30px;
+    margin-bottom:14px;
+    color:var(--rust);
+  }
+  .cat-label{
+    font-family:'Oswald',sans-serif;
+    font-weight:600;
+    font-size:16px;
+    text-transform:uppercase;
+    letter-spacing:.03em;
+    display:block;
+    margin-bottom:6px;
+    color:var(--text);
+  }
+  .cat-desc{color:var(--text-dim); font-size:13.5px; line-height:1.4;}
+
+  .panel{
+    background:var(--paper);
+    color:var(--text);
+    border-radius:12px;
+    padding:30px;
+    box-shadow:0 24px 48px -20px rgba(0,0,0,.5);
+  }
+  .panel label.field-label{
+    display:block;
+    font-family:'Oswald',sans-serif;
+    text-transform:uppercase;
+    letter-spacing:.1em;
+    font-size:11.5px;
+    color:var(--text-dim);
+    margin-bottom:10px;
+  }
+  .current-cat{
+    color:var(--rust);
+    font-weight:600;
+    font-style:normal;
+  }
+  input[type=text]{
+    width:100%;
+    padding:14px 16px;
+    border:1.5px solid var(--line);
+    background:#fff;
+    font-family:'Lora',serif;
+    font-size:15.5px;
+    border-radius:8px;
+    color:var(--text);
+    margin-bottom:18px;
+    transition:border-color .2s ease, box-shadow .2s ease;
+  }
+  input[type=text]:focus{
+    outline:none;
+    border-color:var(--teal);
+    box-shadow:0 0 0 3px rgba(47,110,104,.15);
+  }
+
+  .btn-row{display:flex; gap:10px; flex-wrap:wrap;}
+  button.action{
+    font-family:'Oswald',sans-serif;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    font-size:13px;
+    font-weight:600;
+    padding:14px 22px;
+    border:none;
+    cursor:pointer;
+    border-radius:8px;
+    transition:transform .15s ease, box-shadow .2s ease, filter .15s ease;
+  }
+  button.action:active{transform:translateY(1px) scale(.99);}
+  .btn-primary{background:var(--rust); color:#fff; box-shadow:0 8px 20px -8px rgba(193,68,45,.55);}
+  .btn-primary:hover{filter:brightness(1.08); box-shadow:0 10px 24px -8px rgba(193,68,45,.7);}
+  .btn-ghost{background:transparent; color:var(--text-dim); border:1.5px solid var(--line);}
+  .btn-ghost:hover{border-color:var(--teal); color:var(--teal);}
+
+  .back-link{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    margin-bottom:18px;
+    color:#8f8a7a;
+    font-size:12.5px;
+    cursor:pointer;
+    font-family:'Oswald',sans-serif;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    transition:color .2s ease;
+    background:none; border:none; padding:0;
+  }
+  .back-link:hover{color:var(--brass);}
+
+  .idea-card{
+    background:#fff;
+    border-radius:10px;
+    padding:22px 24px;
+    margin-bottom:16px;
+    position:relative;
+    border:1px solid var(--line);
+    opacity:0;
+    animation:cardIn .5s cubic-bezier(.16,1,.3,1) forwards;
+    transition:box-shadow .2s ease, transform .2s ease;
+  }
+  .idea-card:hover{
+    box-shadow:0 16px 30px -16px rgba(0,0,0,.3);
+    transform:translateY(-2px);
+  }
+  .idea-card:nth-child(1){animation-delay:.05s;}
+  .idea-card:nth-child(2){animation-delay:.15s;}
+  .idea-card:nth-child(3){animation-delay:.25s;}
+  @keyframes cardIn{
+    from{opacity:0; transform:translateY(10px);}
+    to{opacity:1; transform:translateY(0);}
+  }
+  .idea-card::before{
+    content:"";
+    position:absolute; left:0; top:16px; bottom:16px;
+    width:3px; border-radius:3px;
+    background:var(--brass);
+  }
+  .idea-subject{
+    font-size:16px;
+    line-height:1.55;
+    margin:0 0 14px;
+    color:var(--text);
+  }
+  .idea-constraints{
+    list-style:none;
+    padding:0; margin:0;
+    display:flex;
+    flex-wrap:wrap;
+    gap:7px;
+  }
+  .idea-constraints li{
+    font-size:12.5px;
+    line-height:1.3;
+    color:var(--text-dim);
+    background:var(--paper-dim);
+    padding:6px 11px;
+    border-radius:20px;
+  }
+  .idea-deadline{
+    margin-top:16px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .deadline-badge{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11.5px;
+    font-weight:600;
+    letter-spacing:.02em;
+    color:#fff;
+    background:var(--rust);
+    padding:6px 12px;
+    border-radius:20px;
+    transform:rotate(-2deg);
+    box-shadow:0 4px 10px -4px rgba(193,68,45,.6);
+    white-space:nowrap;
+  }
+  .deadline-text{
+    font-size:12.5px;
+    color:var(--text-dim);
+    font-family:'IBM Plex Mono',monospace;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="stamp-label">Studio Creativo</div>
+  <h1>Genera un'idea</h1>
+  <p>Scegli un ambito, ricevi una commessa vera — con vincoli precisi e una scadenza da rispettare.</p>
+</header>
+
+<div class="progress" id="progressBar">
+  <div class="dot" data-dot="1"></div>
+  <div class="bar" data-bar="1"></div>
+  <div class="dot" data-dot="2"></div>
+  <div class="bar" data-bar="2"></div>
+  <div class="dot" data-dot="3"></div>
+</div>
+
+<main>
+
+  <div class="step active" id="step1">
+    <div class="categories">
+      <button class="cat-card" onclick="chooseCategory('sito')">
+        <svg class="cat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><circle cx="6" cy="6.5" r=".6" fill="currentColor" stroke="none"/><circle cx="8.4" cy="6.5" r=".6" fill="currentColor" stroke="none"/></svg>
+        <span class="cat-label">Sito web</span>
+        <span class="cat-desc">Un progetto di design/sviluppo web</span>
+      </button>
+      <button class="cat-card" onclick="chooseCategory('digitale')">
+        <svg class="cat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="3" width="16" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M20 15l-5-5-9 9"/></svg>
+        <span class="cat-label">Composizione digitale</span>
+        <span class="cat-desc">Cover, poster, illustrazione, artwork</span>
+      </button>
+      <button class="cat-card" onclick="chooseCategory('mano')">
+        <svg class="cat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>
+        <span class="cat-label">Disegno a mano</span>
+        <span class="cat-desc">Matita, inchiostro, acquerello, carboncino</span>
+      </button>
+      <button class="cat-card" onclick="chooseCategory('libera')">
+        <svg class="cat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2l1.8 5.6L20 9l-5.6 1.8L12 16l-1.8-5.2L5 9l6.2-1.4z"/><circle cx="18" cy="18" r="1.6"/></svg>
+        <span class="cat-label">Categoria libera</span>
+        <span class="cat-desc">Qualsiasi altra forma d'arte</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="step" id="step2">
+    <button class="back-link" onclick="goToStep(1)">← Cambia categoria</button>
+    <div class="panel">
+      <label class="field-label">Categoria: <span class="current-cat" id="currentCatLabel"></span></label>
+      <label class="field-label" for="ambitoInput">Ambito o argomento</label>
+      <input type="text" id="ambitoInput" placeholder="es. astronomia, geologia, un ricordo d'infanzia..." autocomplete="off">
+      <div class="btn-row">
+        <button class="action btn-primary" onclick="generateIdeas()">Genera idee</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="step" id="step3">
+    <button class="back-link" onclick="goToStep(2)">← Cambia ambito</button>
+    <div class="panel">
+      <label class="field-label">Categoria: <span class="current-cat" id="currentCatLabel2"></span> — Ambito: <span class="current-cat" id="currentAmbitoLabel"></span></label>
+      <div id="ideasList"></div>
+      <div class="btn-row">
+        <button class="action btn-primary" onclick="generateIdeas()">Genera altre idee</button>
+        <button class="action btn-ghost" onclick="goToStep(1)">Cambia tutto</button>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+const CATEGORY_LABELS = {
+  sito: "Sito web",
+  digitale: "Composizione digitale",
+  mano: "Disegno a mano",
+  libera: "Categoria libera"
+};
+
+const TEMPLATES = {
+  sito: [
+    "Un sito che funga da showroom/galleria dedicato a {cat}, con una sezione portfolio e una sezione 'dietro le quinte'.",
+    "Una landing page per un ipotetico evento o iniziativa legata a {cat}.",
+    "Un blog personale interamente dedicato a {cat}, con almeno tre categorie di articoli diverse.",
+    "Un e-commerce fittizio che vende prodotti ispirati a {cat}.",
+    "Un sito-portfolio che presenta lavori (foto, illustrazioni, testi) tutti ispirati a {cat}.",
+    "Una pagina 'about' immersiva che racconta una storia legata a {cat} attraverso lo scroll.",
+    "Un piccolo sito enciclopedico, in stile archivio, dedicato a {cat}.",
+    "Una one-page di presentazione per un progetto/collettivo immaginario legato a {cat}."
+  ],
+  digitale: [
+    "Una composizione che rappresenti il lato più filosofico di {cat}, con effetto texture granulata e colori in forte contrasto.",
+    "Una cover ispirata a {cat}, in stile minimalista con palette monocromatica e un solo accento cromatico.",
+    "Un poster ispirato a {cat}, con composizione isometrica e tipografia come elemento protagonista.",
+    "Un'illustrazione editoriale su {cat}, in stile collage con elementi fotografici e disegnati misti.",
+    "Un artwork astratto che traduce {cat} in forme geometriche pure, palette di massimo 3 colori.",
+    "Un character o creature design ispirato a {cat}, in stile pixel art a bassa risoluzione.",
+    "Una composizione a doppia esposizione che unisca un elemento umano e uno legato a {cat}.",
+    "Un artwork in stile risografia a due colori piatti, ispirato a {cat}."
+  ],
+  mano: [
+    "Uno studio a matita di un dettaglio caratteristico di {cat}, con forte attenzione al chiaroscuro.",
+    "Un disegno a inchiostro, solo linea continua, che rappresenti un momento o oggetto simbolico legato a {cat}.",
+    "Un acquerello che catturi l'atmosfera di {cat}, con bordi bagnati e colori sfumati.",
+    "Uno schizzo veloce, massimo 15 minuti, di qualcosa legato a {cat}, di getto e senza correzioni.",
+    "Un disegno a carboncino di un momento di transizione o cambiamento dentro {cat}.",
+    "Un disegno in stile illustrazione scientifica/naturalistica ispirato a {cat}.",
+    "Un ritratto immaginario di una figura legata a {cat}, solo in bianco e nero.",
+    "Uno studio di composizione con almeno tre schizzi rapidi diversi, tutti su {cat}."
+  ],
+  libera: [
+    "Un'opera che rappresenti un fenomeno caratteristico di {cat}, nella tecnica che preferisci.",
+    "Un progetto che racconti un prima e un dopo legato a {cat}.",
+    "Un'opera che unisca due elementi in contrasto dentro {cat}.",
+    "Un progetto che dia forma visiva a un concetto astratto legato a {cat}.",
+    "Un'opera che rappresenti un dettaglio nascosto o poco osservato di {cat}.",
+    "Un progetto che racconti {cat} dal punto di vista di chi lo vive raramente o mai.",
+    "Un'opera che riduca {cat} alla sua forma più essenziale, eliminando ogni dettaglio superfluo.",
+    "Un progetto che esageri volutamente un aspetto di {cat} fino a renderlo grottesco o assurdo."
+  ]
+};
+
+const CONSTRAINT_POOLS = {
+  sito: [
+    ["stile brutalista, tipografia enorme e contrasti netti","estetica anni '90 da primi siti internet","design minimal scandinavo, tanto spazio bianco","stile da rivista digitale con layout editoriale","estetica cyberpunk, neon su sfondo scuro","stile da archivio istituzionale, austero e ordinato"],
+    ["massimo 3 pagine in tutto, niente scroll infinito","deve stare interamente in una sola pagina (one-page)","navigazione laterale fissa, non in alto","niente hero image: si parte subito con il contenuto vero","deve includere una sezione con dati o numeri reali visualizzati graficamente"],
+    ["palette di soli 2 colori, uno chiarissimo e uno scurissimo","solo toni di un unico colore, dal chiarissimo allo scurissimo","palette desaturata all'80%, quasi monocroma","nessun colore: solo bianco, nero, grigio e un unico accento puntuale"],
+    ["niente immagini fotografiche: solo forme e tipografia","il footer deve risultare più curato dell'header","la tipografia è l'unico elemento decorativo ammesso","deve funzionare e restare leggibile anche letto ad alta voce da uno screen reader"]
+  ],
+  digitale: [
+    ["stile isometrico","palette monocromatica con un solo accento","collage analogico digitalizzato","pixel art a bassa risoluzione","linea continua, un solo tratto ininterrotto","acquerello digitale a bordi bagnati","risografia a due colori piatti","silhouette e controluce"],
+    ["formato verticale da poster","formato quadrato pensato per un feed","spread a doppia pagina","formato panoramico orizzontale","formato a francobollo, molto piccolo"],
+    ["solo forme geometriche pure, niente organico","palette di massimo 3 colori totali","niente testo: la storia passa solo per l'immagine","composizione costruita solo su diagonali","niente nero puro né bianco puro in tutta la composizione"],
+    ["deve contenere un elemento volutamente anacronistico","deve suggerire un suono o un movimento restando immagine ferma","deve raccontare un prima e un dopo in una sola inquadratura","deve poter funzionare anche capovolto, sottosopra"]
+  ],
+  mano: [
+    ["da completare in massimo 30 minuti, senza gomma","un'unica sessione, niente pause superiori a 5 minuti","va iniziato dal dettaglio più piccolo, non dal contorno generale"],
+    ["su un foglio non più grande di un A5","in formato quadrato","in un formato molto allungato, quasi uno striscione"],
+    ["solo con un unico strumento a scelta, niente combinazioni","in bianco e nero, nessuna sfumatura: solo tratteggio","a colori ma con una sola tonalità calda e una sola fredda"],
+    ["il soggetto deve uscire dai bordi del foglio, niente margini","va disegnato senza mai staccare la mano dal foglio","niente riferimenti fotografici: solo memoria o immaginazione"]
+  ],
+  libera: [
+    ["deve essere completabile in una sola sessione di lavoro","deve usare solo materiali o strumenti che hai già in casa","deve poter essere capito senza bisogno di spiegazioni scritte"],
+    ["deve contenere un elemento che sembra volutamente fuori posto","deve avere una scala sbagliata di proposito, troppo piccola o enorme","deve poter essere realizzato anche con vincoli di spazio minimi"],
+    ["niente riferimenti diretti: solo allusioni indirette","deve essere realizzabile in bianco e nero o con un'unica tonalità","deve includere un errore voluto, lasciato ben visibile"]
+  ]
+};
+
+const DEADLINE_RANGES = {
+  sito: [3,6],
+  digitale: [2,4],
+  mano: [1,3],
+  libera: [2,4]
+};
+
+function formatDeadline(days){
+  const d = new Date(Date.now() + days*24*60*60*1000);
+  const giorni = ['dom','lun','mar','mer','gio','ven','sab'];
+  const mesi = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
+  return giorni[d.getDay()] + ' ' + d.getDate() + ' ' + mesi[d.getMonth()];
+}
+
+let currentCategory = null;
+let currentAmbito = "";
+
+function updateProgress(n){
+  document.querySelectorAll('.progress .dot').forEach(function(dot){
+    const idx = parseInt(dot.dataset.dot, 10);
+    dot.classList.toggle('done', idx < n);
+    dot.classList.toggle('now', idx === n);
+  });
+  document.querySelectorAll('.progress .bar').forEach(function(bar){
+    const idx = parseInt(bar.dataset.bar, 10);
+    bar.classList.toggle('done', idx < n);
+  });
+}
+
+function goToStep(n){
+  document.querySelectorAll('.step').forEach(function(s){ s.classList.remove('active'); });
+  document.getElementById('step' + n).classList.add('active');
+  updateProgress(n);
+}
+
+function chooseCategory(cat){
+  currentCategory = cat;
+  document.getElementById('currentCatLabel').textContent = CATEGORY_LABELS[cat];
+  document.getElementById('ambitoInput').value = "";
+  goToStep(2);
+  setTimeout(function(){ document.getElementById('ambitoInput').focus(); }, 300);
+}
+
+function pickUnique(arr, n){
+  const copy = arr.slice();
+  const out = [];
+  for(let i=0; i<n && copy.length; i++){
+    const idx = Math.floor(Math.random()*copy.length);
+    out.push(copy.splice(idx,1)[0]);
+  }
+  return out;
+}
+
+function generateIdeas(){
+  const input = document.getElementById('ambitoInput');
+  const val = (currentAmbito = input.value.trim() || currentAmbito);
+  if(!val){
+    input.focus();
+    return;
+  }
+  currentAmbito = val;
+
+  document.getElementById('currentCatLabel2').textContent = CATEGORY_LABELS[currentCategory];
+  document.getElementById('currentAmbitoLabel').textContent = val;
+
+  const subjectPool = TEMPLATES[currentCategory];
+  const constraintPools = CONSTRAINT_POOLS[currentCategory];
+  const subjects = pickUnique(subjectPool, 3);
+
+  const ideas = subjects.map(function(subjectTemplate){
+    const subject = subjectTemplate.replace(/{cat}/g, val);
+    const constraints = constraintPools.map(function(pool){ return pickUnique(pool, 1)[0]; });
+    const range = DEADLINE_RANGES[currentCategory];
+    const days = Math.floor(range[0] + Math.random()*(range[1]-range[0]+1));
+    return { subject: subject, constraints: constraints, days: days };
+  });
+
+  const list = document.getElementById('ideasList');
+  list.innerHTML = ideas.map(function(idea){
+    return '<div class="idea-card">' +
+      '<p class="idea-subject">' + idea.subject + '</p>' +
+      '<ul class="idea-constraints">' +
+        idea.constraints.map(function(c){ return '<li>' + c + '</li>'; }).join('') +
+      '</ul>' +
+      '<div class="idea-deadline">' +
+        '<span class="deadline-badge">' + idea.days + ' giorn' + (idea.days === 1 ? 'o' : 'i') + '</span>' +
+        '<span class="deadline-text">consegna entro ' + formatDeadline(idea.days) + '</span>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+
+  goToStep(3);
+}
+
+updateProgress(1);
+
+// Registrazione Service Worker per PWA
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then(reg => console.log('Service Worker registrato con successo:', reg.scope))
+      .catch(err => console.error('Registrazione Service Worker fallita:', err));
+  });
+}
+</script>
+</body>
+</html>
